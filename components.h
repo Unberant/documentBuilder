@@ -3,56 +3,27 @@
 #include <istream>
 #include <fstream>
 #include<sstream>
+#include <algorithm>
 #include<windows.h>
 #include <conio.h>
 #include <vector>
-//цвета
-#define COLOR_BLACK 0           //черный
-#define COLOR_BLUE 1            //синий
-#define COLOR_GREEN 2           //зеленый
-#define COLOR_CYAN 3            //голубой
-#define COLOR_RED 4             //красный
-#define COLOR_MAGENTA 5         //фиолетовый
-#define COLOR_BROWN 6           //коричневый
-#define COLOR_LIGHTGRAY 7       //светло-серый
-#define COLOR_DARKGRAY 8        //темно-серый
-#define COLOR_LIGHTBLUE 9       //светло-синий
-#define COLOR_LIGHTGREEN 10     //светло-зеленый
-#define COLOR_LIGHTRED 12       //светло-красный
-#define COLOR_LIGHTMAGENTA 13   //светло-фиолетовый
-#define COLOR_YELLOW 14         //желтый
-#define COLOR_WHITE 15          //белый
+#include <list>
 
-
-//класс консоли
 class TConsole
 {
 private:
-    HANDLE InputHandle;                         //дескриптор буфера ввода
-    HANDLE OutputHandle;                        //дескриптор буфера вывода
-    CONSOLE_SCREEN_BUFFER_INFO ScreenBufInfo;   //информация об экранном буфере консоли
+    HANDLE InputHandle;                        
+    HANDLE OutputHandle;                     
+    CONSOLE_SCREEN_BUFFER_INFO ScreenBufInfo; 
 public:
-    std::ostream& Out;              //поток вывода
-    std::istream& In;               //поток ввода
-    TConsole();                     //конструктор
-    void ClrEol();                  //функция удаления символов от курсора до конца строки
-    void ClrScr();                  //функция очистки экрана
-    void Delay(WORD MS);            //функция задержки выполнения
-    void DelLine();                 //функция удаления строки
-    void GotoXY(int X, int Y);      //функция перемещения курсора
-    void InsLine();                 //функция добавления строки
-    bool KeyPressed();              //функция проверки нажатия клавиши
-    WCHAR ReadKey();                //функция чтения символа с клавиатуры
-    void TextBackground(BYTE Color);//функция задания цвета фона
-    void TextColor(BYTE Color);     //функция задания цвета текста
-    int WhereX();                   //функция получения текущей координаты X курсора
-    int WhereY();                   //функция получения текущей координаты Y курсора
-    void Window(BYTE X, BYTE Y);    //функция задания размеров окна
+    std::ostream& Out;         
+    std::istream& In;            
+    TConsole();   
+    void DelLine();
+    void Delay(WORD MS);            
+    void GotoXY(int X, int Y);   
+    int WhereY();
 };
-
-namespace global {
-    extern TConsole console;
-}
 
 enum alignment
 {
@@ -75,6 +46,11 @@ struct coordinates
         x = _x;
         y = _y;
     }
+    void set_coordinates(const coordinates& _coordinates)
+    {
+        x = _coordinates.x;
+        y = _coordinates.y;
+    }
 
     unsigned int x = 0;
     unsigned int y = 0;
@@ -82,10 +58,10 @@ struct coordinates
 
 struct indents
 {
-    explicit indents(const char _symbol) : symbol(_symbol) {}
-    indents(char _symbol, unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left)
+    explicit indents(const char _symbol) : symbol(_symbol) { }
+
+    indents(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left)
     {
-        symbol = _symbol;
         top = _top;
         bottom = _bottom;
         left = _left;
@@ -110,223 +86,208 @@ struct indents
     char symbol;
 };
 
-void draw_horizontal_line(char _symbol, unsigned int start, unsigned int end, unsigned int y);
-void draw_vertical_line(char _symbol, unsigned int start, unsigned int end, unsigned int x);
-
-class blocksBorders
+namespace variables
 {
+    extern TConsole console;
+    extern unsigned console_x;
+    extern  unsigned console_y;
+}
+
+namespace functions
+{
+    void draw_horizontal_line(char _symbol, unsigned int start, unsigned int end, unsigned int y);
+    void draw_vertical_line(char _symbol, unsigned int start, unsigned int end, unsigned int x);
+
+
+    size_t minimum(size_t n1, size_t n2, size_t n3, size_t n4);
+    size_t maxInVector(const std::vector<size_t>& _vec);
+
+    alignment stringToAlignment(std::string _string);
+
+    indents stringToIndents(std::string _string);
+    std::string file_to_string(std::istream& _file);
+}
+
+template<typename T, typename U>
+class Iterator {
 public:
-    blocksBorders()
-    {
-        startsCoordinates.x = 0;
-        startsCoordinates.y = 0;
-        margin.set_indents(0, 0, 0, 0);
-        padding.set_indents(0, 0, 0, 0);
-        border.set_indents(1, 1, 1, 1);
-        border_size = 1;
-    }
-    blocksBorders(int start_x, int start_y)
-    {
-        startsCoordinates.x = start_x;
-        startsCoordinates.y = start_y;
-        margin.set_indents(0, 0, 0, 0);
-        padding.set_indents(0, 0, 0, 0);
-        border.set_indents(1, 1, 1, 1);
-        border_size = 1;
-    }
-    blocksBorders(coordinates _coordinates)
-    {
-        startsCoordinates.set_coordinates(_coordinates.x, _coordinates.y);
-        margin.set_indents(0, 0, 0, 0);
-        padding.set_indents(0, 0, 0, 0);
-        border.set_indents(1, 1, 1, 1);
-        border_size = 1;
-    }
-    ~blocksBorders() = default;
+    typedef typename std::list<T*>::iterator filesIt;
 
-    void set_align(int _align)
-    {
-        //align = _align;
-    }
+    Iterator(const U& _children) : children(_children) { it = children.begin(); }
 
-    void set_border(unsigned int _size, char _symbol)
-    {
-        border.set_indents(_size, _size, _size, _size);
-        border_size = _size;
-        border.set_symbol(_symbol);
-    }
+    void first() { it = children.begin(); }
 
-    void set_margin(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left)
-    {
-        margin.set_indents(_top, _right, _bottom, _left);
-    }
+    void next() { it++; }
 
-    void set_padding(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left)
-    {
-        padding.set_indents(_top, _right, _bottom, _left);
-    }
+    T* getPrevious() { return *(it - 1); }
 
-    void set_mask(char _symbol)
-    {
-        mask = _symbol;
-    }
+    T* current() { return *it; }
 
-    void set_width(unsigned int _width)
-    {
-        width = _width;
-    }
-
-    void set_height(unsigned int _height)
-    {
-        height = _height;
-    }
-
-    void render()
-    {
-        coordinates left_top = startsCoordinates;
-        coordinates right_top(margin.left + border.left + padding.left + width + margin.right + border.right + padding.right, left_top.y);
-        coordinates left_bottom(left_top.x, margin.top + border.top + padding.top + height + margin.bottom + border.bottom + padding.bottom);
-        coordinates right_bottom(right_top.x, left_bottom.y);
-
-        std::vector<indents> borders;
-        borders.push_back(margin);
-        borders.push_back(border);
-        borders.push_back(padding);
-
-        for (size_t border_type = 0; border_type < borders.size(); ++border_type)
-        {
-            int top_indent = borders.at(border_type).top;
-            int left_indent = borders.at(border_type).left;
-            int right_indent = borders.at(border_type).right;
-            int bottom_indent = borders.at(border_type).bottom;
-            char symbol = borders.at(border_type).symbol;
-
-            for (size_t top_border = 0; top_border < top_indent; ++top_border)
-            {
-                draw_horizontal_line(symbol, left_top.x, right_top.x, left_top.y + top_border);
-            }
-            for (size_t left_border = 0; left_border < left_indent; ++left_border)
-            {
-                draw_vertical_line(symbol, left_top.y + top_indent, left_bottom.y - bottom_indent, left_top.x + left_border);
-            }
-            for (size_t right_border = 0; right_border < right_indent; ++right_border)
-            {
-                draw_vertical_line(symbol, right_top.y + top_indent, right_bottom.y - bottom_indent, right_top.x - right_border);
-            }
-            for (size_t bottom_border = 0; bottom_border < bottom_indent; ++bottom_border)
-            {
-                draw_horizontal_line(symbol, left_bottom.x, right_bottom.x, left_bottom.y - bottom_border);
-            }
-            
-            left_top.set_coordinates(left_top.x + borders.at(border_type).left, left_top.y + borders.at(border_type).top);
-            right_top.set_coordinates(right_top.x - borders.at(border_type).right, right_top.y + borders.at(border_type).top);
-            left_bottom.set_coordinates(left_bottom.x + borders.at(border_type).left, left_bottom.y - borders.at(border_type).bottom);
-            right_bottom.set_coordinates(right_bottom.x - borders.at(border_type).right, right_bottom.y - borders.at(border_type).bottom);
-
-        }
-        startsCoordinates.set_coordinates(left_top.x, left_top.y);
-    }
-
-    coordinates get_coordinates() const
-    {
-        return startsCoordinates;
-    }
-
+    bool isDone() { return (it == children.end()); }
 private:
-    coordinates startsCoordinates;
-    alignment align;
-
-    indents margin = indents('-');
-    indents padding = indents('+');
-    indents border = indents('%');
-
-    unsigned int border_size;
-
-    char mask;
-
-    unsigned int width;
-    unsigned int height;
-
-   // TConsole console;
+    U children;
+    filesIt it;
 };
 
-class blocksLine
+class baseBlock
 {
+    typedef baseBlock* ptrBase;
 public:
-    blocksLine()
-    {
-        startsCoordinates.set_coordinates(0, 0);
-        text = "none";
-        width = text.size();
-    }
-    blocksLine(const std::string& _text)
-    {
-        startsCoordinates.set_coordinates(0, 0);
-        text = _text;
-        width = text.size();
-    }
-    blocksLine(const std::string& _text, const coordinates _coordinates)
-    {
-        startsCoordinates.set_coordinates(_coordinates.x, _coordinates.y);
-        text = _text;
-        width = text.size();
-    }
-    ~blocksLine() = default;
+    baseBlock() { startsCoordinates.set_coordinates(0, 0); }
+    baseBlock(int start_x, int start_y) { startsCoordinates.set_coordinates(start_x, start_y); }
 
-    void set_text(const std::string& _new_text)
-    {
-        text = _new_text;
-        width = text.size();
-    }
+    virtual ~baseBlock() = default;
 
-    void set_align(int _align)
-    {
-        //align = _align;
-    }
+    virtual ptrBase clone() const = 0;
 
-    void set_mask(char _symbol)
-    {
-        mask = _symbol;
-    }
+    virtual void addConnection(ptrBase component) { }
+    virtual void deleteConnection() = 0;
+    virtual void deleteElement(ptrBase component) { }
 
-    void render()
-    {
-        switch (align)
-        {
-        case LEFT:
-        {
-            break;
-        }
-        case CENTER:
-        {
-            break;
-        }
-        case RIGHT:
-        {
-            break;
-        }
-        }
-        global::console.GotoXY(startsCoordinates.x, startsCoordinates.y);
-        std::cout << text;
-    }
+    virtual ptrBase getParent()	const final { return parent; }
+    virtual void setParent(ptrBase _parent) final { this->parent = _parent; }
 
-private:
+    virtual std::list<ptrBase> getChildren() const { return std::list<ptrBase>{}; }
+
+    virtual void addElementAfter(ptrBase component, ptrBase new_component) { }
+
+    virtual Iterator<baseBlock, std::list<ptrBase>>* create_iterator() const { return nullptr; }
+    virtual Iterator<baseBlock, std::list<ptrBase>>* create_iterator(ptrBase _element) const { return nullptr; }
+
+    virtual void set_align(alignment _align) final { align = _align; }
+    virtual void set_align_ForIt(alignment _align) final { alignForIt = _align; }
+
+    virtual void set_mask(char _symbol) final { mask = _symbol; }
+    virtual void set_mask_mode(bool _mode) final { useMask = _mode; }
+    
+    virtual void set_border(unsigned int _size, char _symbol) { }
+
+    virtual void set_margin(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left) { }
+    virtual void set_margin(indents _indent) { }
+
+    virtual void set_padding(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left) { }
+    virtual void set_padding(indents _indent) { }
+
+    virtual void set_text(const std::string& _new_text) { }
+
+    virtual void set_width(unsigned int _width) final { width = _width; }
+
+    virtual void set_height(unsigned int _height) final { height = _height; }
+
+    virtual void set_coordinates(const coordinates& _coordinates) final { startsCoordinates = _coordinates; }
+
+    virtual void set_chars(char _mask) = 0;
+
+    virtual unsigned get_width() const { return width; }
+    virtual unsigned get_inside_width() const final { return width; }
+
+    virtual unsigned get_height() const { return height; }
+    virtual alignment get_alignment() const final { return align; }
+
+    virtual coordinates get_coordinates() const final { return startsCoordinates; }
+    virtual coordinates get_end_coords() const { return coordinates(startsCoordinates.x, startsCoordinates.y + 1); }
+
+    virtual char get_mask() const final { return mask; }
+    virtual char get_mask_mode() const final { return useMask; }
+
+    virtual bool isBlock() const = 0;
+
+    virtual void configureDimensions(const coordinates& _coordinates) = 0;
+    virtual void configureTextByMask() { }
+    virtual void configureCoordinatesByAlign(unsigned parental_relocation) = 0;
+
+    virtual void render() = 0;
+protected:
     coordinates startsCoordinates;
+  
+    char mask{ ' ' };
+    bool useMask{ false };
 
-    alignment align = alignment::CENTER;
+    alignment align{ LEFT };
+    alignment alignForIt{ LEFT };
 
+    unsigned int width{ 0 };
+    unsigned int height{ 0 };
+
+    ptrBase parent;
+};
+
+class blocksBorders : public baseBlock
+{
+    typedef baseBlock* ptrBase;
+public:
+    blocksBorders();
+    blocksBorders(int start_x, int start_y);
+
+    virtual ~blocksBorders() = default;
+
+    ptrBase clone() const override;
+
+    void addConnection(ptrBase _component) override;
+    void deleteConnection() override;
+
+    void deleteElement(ptrBase component) override;
+
+    std::list<ptrBase> getChildren() const override;
+
+    void addElementAfter(ptrBase component, ptrBase new_component) override;
+
+    Iterator<baseBlock, std::list<ptrBase>>* create_iterator() const override;
+    Iterator<baseBlock, std::list<ptrBase>>* create_iterator(ptrBase _element) const override;
+
+    void set_border(unsigned int _size, char _symbol) override;
+    void set_chars(char _mask) override;
+
+    void set_margin(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left) override;
+    void set_margin(indents _indent) override;
+
+    void set_padding(unsigned int _top, unsigned int _right, unsigned int _bottom, unsigned int _left) override;
+    void set_padding(indents _indent) override;
+
+    unsigned get_height() const override;
+    unsigned get_width() const override;
+
+    coordinates get_end_coords() const override;
+
+    bool isBlock() const override;
+    void configureDimensions(const coordinates& _coordinates) override;
+    void configureCoordinatesByAlign(unsigned parental_relocation) override;
+    void configureTextByMask() override;
+
+    void change_chars_in(ptrBase _element);
+    void render() override;
+private:
+    indents margin { ' ' };
+    indents padding{ ' ' };
+    indents border{ ' ' };
+
+    std::list<ptrBase> children;
+};
+
+class blocksLine : public baseBlock
+{
+    typedef baseBlock* ptrBase;
+public:
+    blocksLine();
+    blocksLine(int start_x, int start_y);
+
+    virtual ~blocksLine() = default;
+
+    ptrBase clone() const override;
+
+    void deleteConnection() override;
+
+    void set_text(const std::string& _new_text) override;
+
+    void set_chars(char _mask) override;
+
+    bool isBlock() const override;
+
+    void configureDimensions(const coordinates& _coordinates) override;
+
+    void configureCoordinatesByAlign(unsigned parental_relocation) override;
+
+    void render() override;
+private:
     std::string text;
-
-    char mask;
-
-    unsigned int width;
-    unsigned int height = 1;
-
-   // TConsole console;
 };
-
-
-
-
-
-

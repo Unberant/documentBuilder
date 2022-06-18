@@ -2,8 +2,8 @@
 
 int main()
 {
-   std::ifstream myFile("docs.txt");
-   std::ifstream new_block("new_block.txt");
+   std::ifstream myFile("_example_doc.txt");
+   std::ifstream new_block("_example_new_doc.txt");
    
    document doc;
    
@@ -13,7 +13,7 @@ int main()
    
    doc.render();
    
-   doc.remove(2); // << std::endl;
+   doc.remove(2);
    std::cout << "Count of elements:" << doc.count() << std::endl;
    std::cout << "is document empty:" << doc.empty() << std::endl;
 

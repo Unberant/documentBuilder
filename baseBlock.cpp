@@ -74,19 +74,16 @@ namespace functions
         }
     }
 }
-
 TConsole::TConsole():In(std::cin), Out(std::cout)
 {
     InputHandle = GetStdHandle(STD_INPUT_HANDLE);
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(OutputHandle, &ScreenBufInfo);
 }
-
 void TConsole::Delay(WORD MS)
 {
     SleepEx(MS, FALSE);
 }
-
 void TConsole::DelLine()
 {
     GetConsoleScreenBufferInfo(OutputHandle, &ScreenBufInfo);
@@ -102,7 +99,6 @@ void TConsole::DelLine()
     ScrollConsoleScreenBuffer(OutputHandle, &ScreenBufInfo.srWindow, 0, Coord, &CI);
     FillConsoleOutputAttribute(OutputHandle, ScreenBufInfo.wAttributes, Size, Coord, &Count);
 }
-
 void TConsole::GotoXY(int X, int Y)
 {
     ScreenBufInfo.dwCursorPosition.X = X;
@@ -113,7 +109,6 @@ void TConsole::GotoXY(int X, int Y)
         DelLine();
     }
 }
-
 int TConsole::WhereY()
 {
     GetConsoleScreenBufferInfo(OutputHandle, &ScreenBufInfo);
